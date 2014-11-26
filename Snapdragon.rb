@@ -16,6 +16,7 @@ Classes (and actors?) have tag:
 		Skill/item tag is <snapdragon [identifier]>?
 			Then <snapdragon [identifier] weapon [id]>
 			<snapdragon [identifier] inherit [stat]: [float]>
+			Get snapdragon working in general first.
 
 Class/actor tag:
 	<snapdragon inherit atk: 1.0>
@@ -24,8 +25,17 @@ Class/actor tag:
 	<snapdragon inherit mdf: 1.0>
 	<snapdragon inherit agi: 1.0>
 	<snapdragon inherit luk: 1.0>
+	
+	When not specified, assume 0.0?
 
 Resulting equipment takes the appearance, base stats and traits of the indicated weapon, plus name and inherited stats from the sacrificed unit.
+
+Use snapdragon on unit
+Refer to weapon/equipment created by snapdragon
+Create instance
+Add targeted actor/creature to instance
+
+methods for getting params, name should refer to the actor/creature
 
 =end
 module Snapdragon
@@ -39,3 +49,35 @@ module Snapdragon
   MATCH_INHERIT_AGI = /<snapdragon inherit agi:\s*(\d*.\d*)>/i
   MATCH_INHERIT_LUK = /<snapdragon inherit luk:\s*(\d*.\d*)>/i
 end
+
+$imported = {} if $imported.nil?
+$imported[:Feld_Snapdragon] = true
+
+module RPG
+  class EquipItem < BaseItem
+    #attr_accessor :snap_battler
+  
+    def snap_battler=(b)
+      @snap_battler = b
+      refresh
+    end
+    
+    def get_snap_battler
+      @snap_battler
+    end
+    
+    alias :make_name_snapdragon :make_name
+    def make_name(name)
+      name = :make_name_snapdragon
+      name = @snap_battler.name if self.snap_battler
+      name
+    end
+  end
+end
+#===============================================================================
+# Instance Manager: setup_instance
+#===============================================================================
+
+#===============================================================================
+# End of File
+#===============================================================================
