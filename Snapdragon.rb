@@ -69,7 +69,7 @@ module RPG
     alias :make_name_snapdragon :make_name
     def make_name(name)
       name = :make_name_snapdragon
-      name = @snap_battler.name if self.snap_battler
+      name = get_snap_battler.name if self.get_snap_battler
       name
     end
   end
