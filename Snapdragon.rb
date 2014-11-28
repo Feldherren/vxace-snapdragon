@@ -39,15 +39,24 @@ methods for getting params, name should refer to the actor/creature
 
 =end
 module Snapdragon
+  # Inheritance rates
+  INHERIT_MHP = 0.01
+  INHERIT_MMP = 0.01
+  INHERIT_ATK = 0.25
+  INHERIT_DEF = 0.20
+  INHERIT_MAT = 0.25
+  INHERIT_MDF = 0.20
+  INHERIT_AGI = 0.10
+  INHERIT_LUK = 0.10
   # Do not remove
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOR = /<snapdragon armou*r:\s*(\d*)>/i
-  MATCH_INHERIT_ATK = /<snapdragon inherit atk:\s*(\d*.\d*)>/i
-  MATCH_INHERIT_DEF = /<snapdragon inherit def:\s*(\d*.\d*)>/i
-  MATCH_INHERIT_MAT = /<snapdragon inherit mat:\s*(\d*.\d*)>/i
-  MATCH_INHERIT_MDF = /<snapdragon inherit mdf:\s*(\d*.\d*)>/i
-  MATCH_INHERIT_AGI = /<snapdragon inherit agi:\s*(\d*.\d*)>/i
-  MATCH_INHERIT_LUK = /<snapdragon inherit luk:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_ATK = /<snapdragon inherit atk:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_DEF = /<snapdragon inherit def:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_MAT = /<snapdragon inherit mat:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_MDF = /<snapdragon inherit mdf:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_AGI = /<snapdragon inherit agi:\s*(\d*.\d*)>/i
+  #MATCH_INHERIT_LUK = /<snapdragon inherit luk:\s*(\d*.\d*)>/i
 end
 
 $imported = {} if $imported.nil?
@@ -55,7 +64,12 @@ $imported[:Feld_Snapdragon] = true
 
 module RPG
   class EquipItem < BaseItem
-    #attr_accessor :snap_battler
+    #attr_accessor :inherit_atk
+    #attr_accessor :inherit_def
+    #attr_accessor :inherit_mat
+    #attr_accessor :inherit_mdf
+    #attr_accessor :inherit_agi
+    #attr_accessor :inherit_luk
   
     def snap_battler=(b)
       @snap_battler = b
@@ -71,6 +85,28 @@ module RPG
       name = :make_name_snapdragon
       name = get_snap_battler.name if self.get_snap_battler
       name
+    end
+    
+    alias :make_params_snapdragon :make_params
+    def make_params(params)
+      params = make_params_snapdragon(params)
+      params = apply_snapdragon_params(params) if self.get_snap_battler
+      params
+    end
+    
+    def apply_snapdragon_params(params)
+      #get_snap_battler.param.size.times do |i|
+      #  params[i] += get_snap_battler.params[i] 
+      #end
+      params[0] += get_snap_battler.param_base(0) * Snapdragon::INHERIT_MHP
+      params[1] += get_snap_battler.param_base(1) * Snapdragon::INHERIT_MMP
+      params[2] += get_snap_battler.param_base(2) * Snapdragon::INHERIT_ATK
+      params[3] += get_snap_battler.param_base(3) * Snapdragon::INHERIT_DEF
+      params[4] += get_snap_battler.param_base(4) * Snapdragon::INHERIT_MAT
+      params[5] += get_snap_battler.param_base(5) * Snapdragon::INHERIT_MDF
+      params[6] += get_snap_battler.param_base(6) * Snapdragon::INHERIT_AGI
+      params[7] += get_snap_battler.param_base(7) * Snapdragon::INHERIT_LUK
+      params
     end
   end
 end
