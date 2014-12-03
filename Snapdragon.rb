@@ -23,12 +23,16 @@ To-do:
     Defer to
   Add support for non-snapdragon-able characters?
     At least prevent removing the character in that case
-
+  Allow specification of non-default inheritance rates?
+    Have weapon store inheritance rate? Default to the default script values
+  Support for removing enemies from combat?
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
   REMOVE_ACTOR = true
-  # Inheritance rates
+  # Whether or not to recover equipment from actors about to be removed. Only useful if REMOVE_ACTOR is true.
+  RECOVER_EQUIPMENT = true
+  # Default inheritance rates
   INHERIT_MHP = 0.01
   INHERIT_MMP = 0.01
   INHERIT_ATK = 0.25
@@ -100,10 +104,10 @@ class Game_Interpreter
     end
     # create copy of snapdragon equipment
     if match_weapon != nil
-      puts "creating weapon " + match_weapon[1]
+      #puts "creating weapon " + match_weapon[1]
       equipment = $game_party.get_instance($data_weapons[match_weapon[1].to_i])
     elsif match_armour != nil
-      puts "creating armour " + match_armour[1]
+      #puts "creating armour " + match_armour[1]
       equipment = $game_party.get_instance($data_armors[match_armour[1].to_i])
     end
     equipment.snap_battler = target
@@ -111,6 +115,9 @@ class Game_Interpreter
     # use snap_battler on new equipment to attach target to it
     # remove actor from party if REMOVE_ACTOR is true
     if (target.actor? and Snapdragon::REMOVE_ACTOR)
+      if Snapdragon::RECOVER_EQUIPMENT
+        $data_actors[target.id].clear_equipments
+      end
       $game_party.remove_actor(target.id)
     end
   end
