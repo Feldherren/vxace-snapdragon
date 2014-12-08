@@ -1,30 +1,39 @@
 =begin
 
-Snapdragon v0.1
+Snapdragon v0.3
 
 Updates:
   v0.1 - it lives! And, importantly, does stuff
   v0.2 - now works from <snapdragon> tag on skills; not items, though
+  x0.3 - now requires Effects Manager, but skills and items can now 
 
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
-    Place Snapdragon script BELOW this in the material list
+  Hime's Effects Manager (http://himeworks.com/2012/10/effects-manager/)
 
+'Snapdragon' or 'Snapshot' is a spell from Tactics Ogre that allowed you to convert party members into weapons. In that game's case, very powerful weapons with stats influenced by the stats of the converted unit.
+This script allows you to do that in your games; turn units into specific weapons or armour. The script can be set to remove actors from the party on use, or not.
+  
 Eventually skill or item with tag <snapdragon> applies snapdragon effect when used.
 Right now, however, You can use the script command snapdragon(target) to create a snapdragon weapon based on tags in the actor or enemy's notebox
 
-Actors have tag:
-	<snapdragon weapon: [id]>
-	<snapdragon armor: [id]>
-...where [id] is the ID number of the weapon or armor (as applicable) the unit will be turned into
+Actor tags:
+	<snapdragon [weapon/armor]: [id]>
+    [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into.
+
+Skill/Item tags:
+  <eff: snapdragon>
+    Causes skill or item to apply the snapdragon effect
 
 Resulting equipment takes the appearance, base stats and traits of the indicated weapon, plus name and inherited stats from the sacrificed unit.
 
 If source actor continues to gain levels after being attached to the equipment (in the event they're not removed from the party), equipment stats will not update.
 
+
+
 To-do:
   Add support for class tags
-    Prioritise character tags
+    Prioritise actor/enemy tags, if present
   Add support for non-snapdragon-able characters?
     At least prevent removing the character in that case
     <no snapdragon>?
@@ -33,11 +42,6 @@ To-do:
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
   Support for removing enemies from combat?
-  Tags for items
-    <snapdragon> and attached effect
-    make_damage_value works for skills, but NOT items, annoyingly
-  Usable without additional effect
-    Currently it refuses to do anything if the skill doesn't at least restore HP or something, out of battle
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
@@ -57,6 +61,8 @@ module Snapdragon
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOUR = /<snapdragon armou*r:\s*(\d*)>/i
   MATCH_SNAPDRAGON = /<snapdragon>/i
+  
+  Effect_Manager.register_effect(:snapdragon)
 end
 
 $imported = {} if $imported.nil?
@@ -135,29 +141,57 @@ class Game_Interpreter
     end
   end
 end
-
-class Game_Battler
-  alias :make_damage_value_snapdragon :make_damage_value
-  def make_damage_value(user, item)
-    make_damage_value_snapdragon(user, item)
-    #puts item.class
-    match = nil
-    if item.class == RPG::Skill
-      match = $data_skills[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
-    elsif item.class == RPG::Item
-      #not working. Items don't even go here
-      match = puts $data_items[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
-      puts match
-    end
-    if match != nil
-      if $game_party.in_battle
-        $game_troop.interpreter.snapdragon(self)
-      else
-        $game_map.interpreter.snapdragon(self)
-      end
-    end
+#===============================================================================
+# Effects Manager stuff
+#===============================================================================
+module RPG
+  class UsableItem
+    def add_effect_snapdragon(code, data_id, args)
+      args[0] = args[0].to_i
+      add_effect(code, data_id, args)
+    end 
   end
 end
+
+class Game_Battler
+  def item_effect_snapdragon(user, item, effect)
+    # stub
+  end
+end
+
+class Game_Battler
+  def item_effect_snapdragon(user, item, effect)
+    if $game_party.in_battle
+      $game_troop.interpreter.snapdragon(self)
+    else
+      $game_map.interpreter.snapdragon(self)
+    end
+    @result.success = true
+  end
+end
+
+#class Game_Battler
+#  alias :make_damage_value_snapdragon :make_damage_value
+#  def make_damage_value(user, item)
+#    make_damage_value_snapdragon(user, item)
+#    #puts item.class
+#    match = nil
+#    if item.class == RPG::Skill
+#      match = $data_skills[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
+#    elsif item.class == RPG::Item
+#      #not working. Items don't even go here
+#      match = puts $data_items[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
+#      puts match
+#    end
+#    if match != nil
+#      if $game_party.in_battle
+#        $game_troop.interpreter.snapdragon(self)
+#      else
+#        $game_map.interpreter.snapdragon(self)
+#      end
+#    end
+#  end
+#end
 #===============================================================================
 # End of File
 #===============================================================================
