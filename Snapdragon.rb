@@ -36,6 +36,8 @@ To-do:
   Tags for items
     <snapdragon> and attached effect
     make_damage_value works for skills, but NOT items, annoyingly
+  Usable without additional effect
+    Currently it refuses to do anything if the skill doesn't at least restore HP or something, out of battle
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
@@ -127,7 +129,7 @@ class Game_Interpreter
     # remove actor from party if REMOVE_ACTOR is true
     if (target.actor? and Snapdragon::REMOVE_ACTOR)
       if Snapdragon::RECOVER_EQUIPMENT
-        #$data_actors[target.id].clear_equipments
+        $game_actors[target.id].clear_equipments()
       end
       $game_party.remove_actor(target.id)
     end
