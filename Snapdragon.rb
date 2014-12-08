@@ -2,6 +2,10 @@
 
 Snapdragon v0.1
 
+Updates:
+  v0.1 - it lives! And, importantly, does stuff
+  v0.2 - now works from <snapdragon> tag on skills; not items, though
+
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
     Place Snapdragon script BELOW this in the material list
@@ -20,12 +24,18 @@ If source actor continues to gain levels after being attached to the equipment (
 
 To-do:
   Add support for class tags
-    Defer to
+    Prioritise character tags
   Add support for non-snapdragon-able characters?
     At least prevent removing the character in that case
+    <no snapdragon>?
+    Also, not snapdragonable if no tags present?
+      Currently it just errors and crashes the game
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
   Support for removing enemies from combat?
+  Tags for items
+    <snapdragon> and attached effect
+    make_damage_value works for skills, but NOT items, annoyingly
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
@@ -33,17 +43,18 @@ module Snapdragon
   # Whether or not to recover equipment from actors about to be removed. Only useful if REMOVE_ACTOR is true.
   RECOVER_EQUIPMENT = true
   # Default inheritance rates
-  INHERIT_MHP = 0.01
-  INHERIT_MMP = 0.01
-  INHERIT_ATK = 0.25
-  INHERIT_DEF = 0.20
-  INHERIT_MAT = 0.25
-  INHERIT_MDF = 0.20
-  INHERIT_AGI = 0.10
-  INHERIT_LUK = 0.10
+  INHERIT_MHP = 0.00
+  INHERIT_MMP = 0.00
+  INHERIT_ATK = 0.5
+  INHERIT_DEF = 0.0
+  INHERIT_MAT = 0.5
+  INHERIT_MDF = 0.0
+  INHERIT_AGI = 0.2
+  INHERIT_LUK = 0.0
   # Do not remove
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOUR = /<snapdragon armou*r:\s*(\d*)>/i
+  MATCH_SNAPDRAGON = /<snapdragon>/i
 end
 
 $imported = {} if $imported.nil?
@@ -92,9 +103,9 @@ end
 #===============================================================================
 class Game_Interpreter
   def snapdragon(target)
-    # get snapdragon equipment from notetags
     match_weapon = nil
     match_armour = nil
+    # get snapdragon equipment from notetags
     if target.actor?
       match_weapon = $data_actors[target.id].note.match( Snapdragon::MATCH_WEAPON )
       match_armour = $data_actors[target.id].note.match( Snapdragon::MATCH_ARMOUR )
@@ -110,15 +121,38 @@ class Game_Interpreter
       #puts "creating armour " + match_armour[1]
       equipment = $game_party.get_instance($data_armors[match_armour[1].to_i])
     end
-    equipment.snap_battler = target
+    equipment.snap_battler = target.clone
     $game_party.gain_item(equipment, 1)
     # use snap_battler on new equipment to attach target to it
     # remove actor from party if REMOVE_ACTOR is true
     if (target.actor? and Snapdragon::REMOVE_ACTOR)
       if Snapdragon::RECOVER_EQUIPMENT
-        $data_actors[target.id].clear_equipments
+        #$data_actors[target.id].clear_equipments
       end
       $game_party.remove_actor(target.id)
+    end
+  end
+end
+
+class Game_Battler
+  alias :make_damage_value_snapdragon :make_damage_value
+  def make_damage_value(user, item)
+    make_damage_value_snapdragon(user, item)
+    #puts item.class
+    match = nil
+    if item.class == RPG::Skill
+      match = $data_skills[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
+    elsif item.class == RPG::Item
+      #not working. Items don't even go here
+      match = puts $data_items[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
+      puts match
+    end
+    if match != nil
+      if $game_party.in_battle
+        $game_troop.interpreter.snapdragon(self)
+      else
+        $game_map.interpreter.snapdragon(self)
+      end
     end
   end
 end
