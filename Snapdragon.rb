@@ -5,7 +5,7 @@ Snapdragon v0.3
 Updates:
   v0.1 - it lives! And, importantly, does stuff
   v0.2 - now works from <snapdragon> tag on skills; not items, though
-  x0.3 - now requires Effects Manager, but skills and items can now 
+  v0.3 - now requires Effects Manager, but <eff: snapdragon> tag now works for items and skills
 
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
