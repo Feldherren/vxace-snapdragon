@@ -6,20 +6,19 @@ Updates:
   v0.1 - it lives! And, importantly, does stuff
   v0.2 - now works from <snapdragon> tag on skills; not items, though
   v0.3 - now requires Effects Manager, but <eff: snapdragon> tag now works for items and skills
+  v0.35 - now doesn't crash if you try to use the effect on someone who doesn't have a <snapdragon [weapon/armor]: #> tag
 
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
   Hime's Effects Manager (http://himeworks.com/2012/10/effects-manager/)
 
-'Snapdragon' or 'Snapshot' is a spell from Tactics Ogre that allowed you to convert party members into weapons. In that game's case, very powerful weapons with stats influenced by the stats of the converted unit.
-This script allows you to do that in your games; turn units into specific weapons or armour. The script can be set to remove actors from the party on use, or not.
-  
-Eventually skill or item with tag <snapdragon> applies snapdragon effect when used.
-Right now, however, You can use the script command snapdragon(target) to create a snapdragon weapon based on tags in the actor or enemy's notebox
+'Snapdragon' or 'Snapshot' is a spell from Tactics Ogre that allowed you to convert party members into weapons.
+This script allows you to do that in your games; turn units into a specific weapon (or other equippable), inheriting the unit's name and adding a portion of their parameters to the item's base parameters.
 
 Actor tags:
 	<snapdragon [weapon/armor]: [id]>
-    [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into.
+    [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
+    Unit will not be subject to snapdragon effect if tag is nor present.
 
 Skill/Item tags:
   <eff: snapdragon>
@@ -29,16 +28,9 @@ Resulting equipment takes the appearance, base stats and traits of the indicated
 
 If source actor continues to gain levels after being attached to the equipment (in the event they're not removed from the party), equipment stats will not update.
 
-
-
 To-do:
   Add support for class tags
     Prioritise actor/enemy tags, if present
-  Add support for non-snapdragon-able characters?
-    At least prevent removing the character in that case
-    <no snapdragon>?
-    Also, not snapdragonable if no tags present?
-      Currently it just errors and crashes the game
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
   Support for removing enemies from combat?
@@ -121,23 +113,26 @@ class Game_Interpreter
       match_weapon = $data_enemies[target.id].note.match( Snapdragon::MATCH_WEAPON )
       match_armour = $data_enemies[target.id].note.match( Snapdragon::MATCH_ARMOUR )
     end
-    # create copy of snapdragon equipment
-    if match_weapon != nil
-      #puts "creating weapon " + match_weapon[1]
-      equipment = $game_party.get_instance($data_weapons[match_weapon[1].to_i])
-    elsif match_armour != nil
-      #puts "creating armour " + match_armour[1]
-      equipment = $game_party.get_instance($data_armors[match_armour[1].to_i])
-    end
-    equipment.snap_battler = target.clone
-    $game_party.gain_item(equipment, 1)
-    # use snap_battler on new equipment to attach target to it
-    # remove actor from party if REMOVE_ACTOR is true
-    if (target.actor? and Snapdragon::REMOVE_ACTOR)
-      if Snapdragon::RECOVER_EQUIPMENT
-        $game_actors[target.id].clear_equipments()
+    # check something matched
+    if match_weapon or match_armour
+      # create copy of snapdragon equipment
+      if match_weapon
+        #puts "creating weapon " + match_weapon[1]
+        equipment = $game_party.get_instance($data_weapons[match_weapon[1].to_i])
+      elsif match_armour
+        #puts "creating armour " + match_armour[1]
+        equipment = $game_party.get_instance($data_armors[match_armour[1].to_i])
       end
-      $game_party.remove_actor(target.id)
+      equipment.snap_battler = target.clone
+      $game_party.gain_item(equipment, 1)
+      # use snap_battler on new equipment to attach target to it
+      # remove actor from party if REMOVE_ACTOR is true
+      if (target.actor? and Snapdragon::REMOVE_ACTOR)
+        if Snapdragon::RECOVER_EQUIPMENT
+          $game_actors[target.id].clear_equipments()
+        end
+        $game_party.remove_actor(target.id)
+      end
     end
   end
 end
