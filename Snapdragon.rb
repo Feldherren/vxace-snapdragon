@@ -7,6 +7,7 @@ Updates:
   v0.2 - now works from <snapdragon> tag on skills; not items, though
   v0.3 - now requires Effects Manager, but <eff: snapdragon> tag now works for items and skills
   v0.35 - now doesn't crash if you try to use the effect on someone who doesn't have a <snapdragon [weapon/armor]: #> tag
+  x0.4 - now supports <snapdragon immune> tag, for when you don't want someone or something to be snapdragonable
 
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
@@ -18,7 +19,9 @@ This script allows you to do that in your games; turn units into a specific weap
 Actor tags:
 	<snapdragon [weapon/armor]: [id]>
     [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
-    Unit will not be subject to snapdragon effect if tag is nor present.
+    Unit will not be subject to snapdragon effect if tag is not present.
+  <snapdragon immune>
+    Prevents snapdragon effect from functioning on actor
 
 Skill/Item tags:
   <eff: snapdragon>
@@ -52,7 +55,7 @@ module Snapdragon
   # Do not remove
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOUR = /<snapdragon armou*r:\s*(\d*)>/i
-  MATCH_SNAPDRAGON = /<snapdragon>/i
+  MATCH_IMMUNE = /<snapdragon immune>/i
   
   Effect_Manager.register_effect(:snapdragon)
 end
@@ -156,37 +159,25 @@ end
 
 class Game_Battler
   def item_effect_snapdragon(user, item, effect)
-    if $game_party.in_battle
-      $game_troop.interpreter.snapdragon(self)
-    else
-      $game_map.interpreter.snapdragon(self)
+    match_immune = nil
+    # check if immune
+    if self.actor?
+      match_immune = $data_actors[self.id].note.match( Snapdragon::MATCH_IMMUNE )
+    elsif self.enemy?
+      match_immune = $data_enemies[self.id].note.match( Snapdragon::MATCH_IMMUNE )
     end
-    @result.success = true
+    if !match_immune
+      if $game_party.in_battle
+        $game_troop.interpreter.snapdragon(self)
+      else
+        $game_map.interpreter.snapdragon(self)
+      end
+      @result.success = true
+    else
+      @result.success = false
+    end
   end
 end
-
-#class Game_Battler
-#  alias :make_damage_value_snapdragon :make_damage_value
-#  def make_damage_value(user, item)
-#    make_damage_value_snapdragon(user, item)
-#    #puts item.class
-#    match = nil
-#    if item.class == RPG::Skill
-#      match = $data_skills[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
-#    elsif item.class == RPG::Item
-#      #not working. Items don't even go here
-#      match = puts $data_items[item.id].note.match( Snapdragon::MATCH_SNAPDRAGON )
-#      puts match
-#    end
-#    if match != nil
-#      if $game_party.in_battle
-#        $game_troop.interpreter.snapdragon(self)
-#      else
-#        $game_map.interpreter.snapdragon(self)
-#      end
-#    end
-#  end
-#end
 #===============================================================================
 # End of File
 #===============================================================================
