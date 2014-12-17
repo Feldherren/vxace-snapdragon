@@ -7,8 +7,9 @@ Updates:
   v0.2 - now works from <snapdragon> tag on skills; not items, though
   v0.3 - now requires Effects Manager, but <eff: snapdragon> tag now works for items and skills
   v0.35 - now doesn't crash if you try to use the effect on someone who doesn't have a <snapdragon [weapon/armor]: #> tag
-  x0.4 - now supports <snapdragon immune> tag, for when you don't want someone or something to be snapdragonable
-
+  v0.4 - now supports <snapdragon immune> tag, for when you don't want someone or something to be snapdragonable
+  v0.5 - now supports weapon/armor/immune tags on classes
+  
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
   Hime's Effects Manager (http://himeworks.com/2012/10/effects-manager/)
@@ -16,7 +17,7 @@ Requirements:
 'Snapdragon' or 'Snapshot' is a spell from Tactics Ogre that allowed you to convert party members into weapons.
 This script allows you to do that in your games; turn units into a specific weapon (or other equippable), inheriting the unit's name and adding a portion of their parameters to the item's base parameters.
 
-Actor tags:
+Actor/Class tags:
 	<snapdragon [weapon/armor]: [id]>
     [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
     Unit will not be subject to snapdragon effect if tag is not present.
@@ -32,8 +33,6 @@ Resulting equipment takes the appearance, base stats and traits of the indicated
 If source actor continues to gain levels after being attached to the equipment (in the event they're not removed from the party), equipment stats will not update.
 
 To-do:
-  Add support for class tags
-    Prioritise actor/enemy tags, if present
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
   Support for removing enemies from combat?
@@ -111,7 +110,15 @@ class Game_Interpreter
     # get snapdragon equipment from notetags
     if target.actor?
       match_weapon = $data_actors[target.id].note.match( Snapdragon::MATCH_WEAPON )
-      match_armour = $data_actors[target.id].note.match( Snapdragon::MATCH_ARMOUR )
+      if !match_weapon
+        # check class for tags instead
+        match_weapon = $data_classes[target.class_id].note.match( Snapdragon::MATCH_WEAPON )
+      end
+      match_armour = $data_classes[target.id].note.match( Snapdragon::MATCH_ARMOUR )
+      if !match_armour
+        # check class for tags instead
+        match_armour = $data_actors[target.class_id].note.match( Snapdragon::MATCH_ARMOUR )
+      end
     elsif target.enemy?
       match_weapon = $data_enemies[target.id].note.match( Snapdragon::MATCH_WEAPON )
       match_armour = $data_enemies[target.id].note.match( Snapdragon::MATCH_ARMOUR )
@@ -163,6 +170,10 @@ class Game_Battler
     # check if immune
     if self.actor?
       match_immune = $data_actors[self.id].note.match( Snapdragon::MATCH_IMMUNE )
+      if !match_immune
+        #check class for tag
+        match_immune = $data_classes[self.class_id].note.match( Snapdragon::MATCH_IMMUNE )
+      end
     elsif self.enemy?
       match_immune = $data_enemies[self.id].note.match( Snapdragon::MATCH_IMMUNE )
     end
