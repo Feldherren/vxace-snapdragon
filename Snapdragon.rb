@@ -1,6 +1,6 @@
 =begin
 
-Snapdragon v0.3
+Snapdragon v1.0, by Feldherren
 
 Updates:
   v0.1 - it lives! And, importantly, does stuff
@@ -9,6 +9,7 @@ Updates:
   v0.35 - now doesn't crash if you try to use the effect on someone who doesn't have a <snapdragon [weapon/armor]: #> tag
   v0.4 - now supports <snapdragon immune> tag, for when you don't want someone or something to be snapdragonable
   v0.5 - now supports weapon/armor/immune tags on classes
+  v1.0 - now complete, though it isn't really different from 0.5; works on actors (in and out of battle) and enemies
   
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
@@ -22,7 +23,7 @@ Actor/Class tags:
     [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
     Unit will not be subject to snapdragon effect if tag is not present.
   <snapdragon immune>
-    Prevents snapdragon effect from functioning on actor
+    Prevents snapdragon effect from functioning on actor or members of class
 
 Skill/Item tags:
   <eff: snapdragon>
@@ -35,7 +36,6 @@ If source actor continues to gain levels after being attached to the equipment (
 To-do:
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
-  Support for removing enemies from combat?
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
@@ -120,8 +120,8 @@ class Game_Interpreter
         match_armour = $data_actors[target.class_id].note.match( Snapdragon::MATCH_ARMOUR )
       end
     elsif target.enemy?
-      match_weapon = $data_enemies[target.id].note.match( Snapdragon::MATCH_WEAPON )
-      match_armour = $data_enemies[target.id].note.match( Snapdragon::MATCH_ARMOUR )
+      match_weapon = $data_enemies[target.enemy_id].note.match( Snapdragon::MATCH_WEAPON )
+      match_armour = $data_enemies[target.enemy_id].note.match( Snapdragon::MATCH_ARMOUR )
     end
     # check something matched
     if match_weapon or match_armour
@@ -175,7 +175,7 @@ class Game_Battler
         match_immune = $data_classes[self.class_id].note.match( Snapdragon::MATCH_IMMUNE )
       end
     elsif self.enemy?
-      match_immune = $data_enemies[self.id].note.match( Snapdragon::MATCH_IMMUNE )
+      match_immune = $data_enemies[self.enemy_id].note.match( Snapdragon::MATCH_IMMUNE )
     end
     if !match_immune
       if $game_party.in_battle
