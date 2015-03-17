@@ -1,6 +1,6 @@
 =begin
 
-Snapdragon v1.0, by Feldherren
+Snapdragon v1.0, by Feldherren (rpaliwoda@googlemail.com)
 
 Updates:
   v0.1 - it lives! And, importantly, does stuff
@@ -36,6 +36,8 @@ If source actor continues to gain levels after being attached to the equipment (
 To-do:
   Allow specification of non-default inheritance rates?
     Have weapon store inheritance rate? Default to the default script values
+  
+This script is free for use in any project, though please add me to the credits and drop me an e-mail if you do use it.
 =end
 module Snapdragon
   # Whether or not to remove actor from party if snapdragon effect is used on them.
