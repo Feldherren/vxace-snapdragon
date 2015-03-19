@@ -10,6 +10,7 @@ Updates:
   v0.4 - now supports <snapdragon immune> tag, for when you don't want someone or something to be snapdragonable
   v0.5 - now supports weapon/armor/immune tags on classes
   v1.0 - now complete, though it isn't really different from 0.5; works on actors (in and out of battle) and enemies
+  v1.1 - now supports custom inheritance rates for actors, classes and enemies. Also, noticed and fixed a bug regarding armour tags; the arrays for actors and classes got mixed up at some point, there.
   
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
@@ -18,12 +19,14 @@ Requirements:
 'Snapdragon' or 'Snapshot' is a spell from Tactics Ogre that allowed you to convert party members into weapons.
 This script allows you to do that in your games; turn units into a specific weapon (or other equippable), inheriting the unit's name and adding a portion of their parameters to the item's base parameters.
 
-Actor/Class tags:
+Actor/Enemy/Class tags:
 	<snapdragon [weapon/armor]: [id]>
     [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
     Unit will not be subject to snapdragon effect if tag is not present.
   <snapdragon immune>
     Prevents snapdragon effect from functioning on actor or members of class
+  <snapdragon inherit [mhp/mmp/atk/def/mat/mdf/agi/luk]: [amount]>
+    Changes inheritance rate for the specified parameter; amount should be a decimal, with 1.0 indicating the unit's entire HP should be added to the base weapon stats.
 
 Skill/Item tags:
   <eff: snapdragon>
@@ -34,8 +37,10 @@ Resulting equipment takes the appearance, base stats and traits of the indicated
 If source actor continues to gain levels after being attached to the equipment (in the event they're not removed from the party), equipment stats will not update.
 
 To-do:
-  Allow specification of non-default inheritance rates?
-    Have weapon store inheritance rate? Default to the default script values
+  Notebox tags for additional features, so the base weapon doesn't need to have the feature assigned in the database.
+    Mostly so we don't need a different sword for every class that has a special feature, like Death Knights adding instant death chance
+  Notebox tags for graphic?
+  Notebox tags for attack animation?
   
 This script is free for use in any project, though please add me to the credits and drop me an e-mail if you do use it.
 =end
@@ -57,6 +62,14 @@ module Snapdragon
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOUR = /<snapdragon armou*r:\s*(\d*)>/i
   MATCH_IMMUNE = /<snapdragon immune>/i
+  MATCH_INHERIT_MHP = /<snapdragon inherit mhp:\s*(\d.*)>/i
+  MATCH_INHERIT_MMP = /<snapdragon inherit mmp:\s*(\d.*)>/i
+  MATCH_INHERIT_ATK = /<snapdragon inherit atk:\s*(\d.*)>/i
+  MATCH_INHERIT_DEF = /<snapdragon inherit def:\s*(\d.*)>/i
+  MATCH_INHERIT_MAT = /<snapdragon inherit mat:\s*(\d.*)>/i
+  MATCH_INHERIT_MDF = /<snapdragon inherit mdf:\s*(\d.*)>/i
+  MATCH_INHERIT_AGI = /<snapdragon inherit agi:\s*(\d.*)>/i
+  MATCH_INHERIT_LUK = /<snapdragon inherit luk:\s*(\d.*)>/i
   
   Effect_Manager.register_effect(:snapdragon)
 end
@@ -90,14 +103,38 @@ module RPG
     end
     
     def apply_snapdragon_params(params)
-      params[0] += get_snap_battler.param_base(0) * Snapdragon::INHERIT_MHP
-      params[1] += get_snap_battler.param_base(1) * Snapdragon::INHERIT_MMP
-      params[2] += get_snap_battler.param_base(2) * Snapdragon::INHERIT_ATK
-      params[3] += get_snap_battler.param_base(3) * Snapdragon::INHERIT_DEF
-      params[4] += get_snap_battler.param_base(4) * Snapdragon::INHERIT_MAT
-      params[5] += get_snap_battler.param_base(5) * Snapdragon::INHERIT_MDF
-      params[6] += get_snap_battler.param_base(6) * Snapdragon::INHERIT_AGI
-      params[7] += get_snap_battler.param_base(7) * Snapdragon::INHERIT_LUK
+      # I'd like not to repeat the whole block here, but actors have id when enemies have enemy_id, so I can't just say 'array = $data_actors' or 'array = $data_enemies' based on what the battler is, as I've found out
+      # plus I need to deal with classes if there's nothing on an actor, too. This looks ugly...
+      # it can probably be done more elegantly, but for now I'm glad it works
+      if get_snap_battler.actor?
+        # (get_snap_battler.note.match(Snapdragon::MATCH_INHERIT_MHP) ? get_snap_battler.note.match(Snapdragon::MATCH_INHERIT_MHP) : Snapdragon::INHERIT_MHP)
+        # ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : Snapdragon::INHERIT_MHP)
+        match_inherit_mhp = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : Snapdragon::INHERIT_MHP))
+        match_inherit_mmp = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MMP) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MMP)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MMP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MMP)[1].to_f : Snapdragon::INHERIT_MMP))
+        match_inherit_atk = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_ATK) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_ATK)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_ATK) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_ATK)[1].to_f : Snapdragon::INHERIT_ATK))
+        match_inherit_def = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_DEF) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_DEF)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_DEF) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_DEF)[1].to_f : Snapdragon::INHERIT_DEF))
+        match_inherit_mat = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MAT) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MAT)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MAT) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MAT)[1].to_f : Snapdragon::INHERIT_MAT))
+        match_inherit_mdf = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MDF) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MDF)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MDF) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MDF)[1].to_f : Snapdragon::INHERIT_MDF))
+        match_inherit_agi = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_AGI) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_AGI)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_AGI) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_AGI)[1].to_f : Snapdragon::INHERIT_AGI))
+        match_inherit_luk = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_LUK) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_LUK)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_LUK) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_LUK)[1].to_f : Snapdragon::INHERIT_LUK))
+      else
+        match_inherit_mhp = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : Snapdragon::INHERIT_MHP)
+        match_inherit_mmp = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MMP) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MMP)[1].to_f : Snapdragon::INHERIT_MMP)
+        match_inherit_atk = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_ATK) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_ATK)[1].to_f : Snapdragon::INHERIT_ATK)
+        match_inherit_def = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_DEF) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_DEF)[1].to_f : Snapdragon::INHERIT_DEF)
+        match_inherit_mat = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MAT) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MAT)[1].to_f : Snapdragon::INHERIT_MAT)
+        match_inherit_mdf = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MDF) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_MDF)[1].to_f : Snapdragon::INHERIT_MDF)
+        match_inherit_agi = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_AGI) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_AGI)[1].to_f : Snapdragon::INHERIT_AGI)
+        match_inherit_luk = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_LUK) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_INHERIT_LUK)[1].to_f : Snapdragon::INHERIT_LUK)
+      end
+      params[0] += get_snap_battler.param_base(0) * match_inherit_mhp
+      params[1] += get_snap_battler.param_base(1) * match_inherit_mmp
+      params[2] += get_snap_battler.param_base(2) * match_inherit_atk
+      params[3] += get_snap_battler.param_base(3) * match_inherit_def
+      params[4] += get_snap_battler.param_base(4) * match_inherit_mat
+      params[5] += get_snap_battler.param_base(5) * match_inherit_mdf
+      params[6] += get_snap_battler.param_base(6) * match_inherit_agi
+      params[7] += get_snap_battler.param_base(7) * match_inherit_luk
       params
     end
   end
@@ -116,10 +153,10 @@ class Game_Interpreter
         # check class for tags instead
         match_weapon = $data_classes[target.class_id].note.match( Snapdragon::MATCH_WEAPON )
       end
-      match_armour = $data_classes[target.id].note.match( Snapdragon::MATCH_ARMOUR )
+      match_armour = $data_actors[target.id].note.match( Snapdragon::MATCH_ARMOUR )
       if !match_armour
         # check class for tags instead
-        match_armour = $data_actors[target.class_id].note.match( Snapdragon::MATCH_ARMOUR )
+        match_armour = $data_classes[target.class_id].note.match( Snapdragon::MATCH_ARMOUR )
       end
     elsif target.enemy?
       match_weapon = $data_enemies[target.enemy_id].note.match( Snapdragon::MATCH_WEAPON )
