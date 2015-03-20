@@ -11,6 +11,7 @@ Updates:
   v0.5 - now supports weapon/armor/immune tags on classes
   v1.0 - now complete, though it isn't really different from 0.5; works on actors (in and out of battle) and enemies
   v1.1 - now supports custom inheritance rates for actors, classes and enemies. Also, noticed and fixed a bug regarding armour tags; the arrays for actors and classes got mixed up at some point, there.
+  v1.2 - now supports defining icons for resulting items from actors, classes or enemies
   
 Requirements: 
 	Hime's Instance Items (http://himeworks.com/2014/01/instance-items/)
@@ -21,12 +22,14 @@ This script allows you to do that in your games; turn units into a specific weap
 
 Actor/Enemy/Class tags:
 	<snapdragon [weapon/armor]: [id]>
-    [id] as the ID number of the weapon or armor (as applicable) the unit will be turned into. 
+    [id] as the ID number of the weapon or armour (as applicable) the unit will be turned into. 
     Unit will not be subject to snapdragon effect if tag is not present.
   <snapdragon immune>
     Prevents snapdragon effect from functioning on actor or members of class
   <snapdragon inherit [mhp/mmp/atk/def/mat/mdf/agi/luk]: [amount]>
     Changes inheritance rate for the specified parameter; amount should be a decimal, with 1.0 indicating the unit's entire HP should be added to the base weapon stats.
+  <snapdragon icon: [icon_index]>
+    [icon_index] as the index of the icon to use for the resulting weapon or armour.
 
 Skill/Item tags:
   <eff: snapdragon>
@@ -39,7 +42,6 @@ If source actor continues to gain levels after being attached to the equipment (
 To-do:
   Notebox tags for additional features, so the base weapon doesn't need to have the feature assigned in the database.
     Mostly so we don't need a different sword for every class that has a special feature, like Death Knights adding instant death chance
-  Notebox tags for graphic?
   Notebox tags for attack animation?
   
 This script is free for use in any project, though please add me to the credits and drop me an e-mail if you do use it.
@@ -62,6 +64,9 @@ module Snapdragon
   MATCH_WEAPON = /<snapdragon weapon:\s*(\d*)>/i
   MATCH_ARMOUR = /<snapdragon armou*r:\s*(\d*)>/i
   MATCH_IMMUNE = /<snapdragon immune>/i
+  MATCH_ICON = /<snapdragon icon:\s*(\d*)/i
+  # could probably be stored in a dictionary or similar with appropriate 
+  # /<snapdragon inherit (mhp|mmp|atk|def|mat|mdf|agi|luk):\s*(\d.*)>/i
   MATCH_INHERIT_MHP = /<snapdragon inherit mhp:\s*(\d.*)>/i
   MATCH_INHERIT_MMP = /<snapdragon inherit mmp:\s*(\d.*)>/i
   MATCH_INHERIT_ATK = /<snapdragon inherit atk:\s*(\d.*)>/i
@@ -88,6 +93,17 @@ module RPG
       @snap_battler
     end
     
+    alias :make_icon_index_snapdragon :make_icon_index
+    def make_icon_index(icon_index)
+      icon_index = :make_icon_index_snapdragon
+      if get_snap_battler.actor?
+        icon_index = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_ICON) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_ICON)[1].to_i : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_ICON) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_ICON)[1].to_i : Snapdragon::MATCH_ICON))
+      else
+        icon_index = ($data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_ICON) ? $data_enemies[get_snap_battler.enemy_id].note.match(Snapdragon::MATCH_ICON)[1].to_i : self.icon_index)
+      end
+      icon_index
+    end
+    
     alias :make_name_snapdragon :make_name
     def make_name(name)
       name = :make_name_snapdragon
@@ -106,9 +122,8 @@ module RPG
       # I'd like not to repeat the whole block here, but actors have id when enemies have enemy_id, so I can't just say 'array = $data_actors' or 'array = $data_enemies' based on what the battler is, as I've found out
       # plus I need to deal with classes if there's nothing on an actor, too. This looks ugly...
       # it can probably be done more elegantly, but for now I'm glad it works
+      # redo stuff here to work off numbers and loop through an array?
       if get_snap_battler.actor?
-        # (get_snap_battler.note.match(Snapdragon::MATCH_INHERIT_MHP) ? get_snap_battler.note.match(Snapdragon::MATCH_INHERIT_MHP) : Snapdragon::INHERIT_MHP)
-        # ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : Snapdragon::INHERIT_MHP)
         match_inherit_mhp = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MHP)[1].to_f : Snapdragon::INHERIT_MHP))
         match_inherit_mmp = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MMP) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_MMP)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MMP) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_MMP)[1].to_f : Snapdragon::INHERIT_MMP))
         match_inherit_atk = ($data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_ATK) ? $data_actors[get_snap_battler.id].note.match(Snapdragon::MATCH_INHERIT_ATK)[1].to_f : ($data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_ATK) ? $data_classes[get_snap_battler.class_id].note.match(Snapdragon::MATCH_INHERIT_ATK)[1].to_f : Snapdragon::INHERIT_ATK))
